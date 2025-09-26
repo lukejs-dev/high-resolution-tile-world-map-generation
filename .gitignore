@@ -1,3 +1,7 @@
 .env
-exported_maps/*
-src/__pycache__/*
+
+# Ignore all generated map output
+exported_maps/
+
+# Ignore Python cache directories
+**/__pycache__/
