@@ -5,9 +5,11 @@ import io
 import logging
 from PIL import Image
 import matplotlib.pyplot as plt
+from matplotlib.colors import LightSource
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 from cartopy.io import srtm
+from . import config
 
 # Disable obnoxious UserWarnings from Pillow when saving large images
 Image.MAX_IMAGE_PIXELS = None
@@ -21,6 +23,10 @@ def generate_map(
     add_rivers=False,
     add_shaded_relief=False,
     add_land_cover=False,
+    ocean_color=config.DEFAULT_OCEAN_COLOR,
+    land_color=config.DEFAULT_LAND_COLOR,
+    river_color=config.DEFAULT_RIVER_COLOR,
+    border_color=config.DEFAULT_BORDER_COLOR,
 ):
     """
     Generates a map image in memory based on the specified features.
@@ -33,6 +39,10 @@ def generate_map(
     logging.info(f"  - Rivers: {add_rivers}")
     logging.info(f"  - Shaded Relief: {add_shaded_relief}")
     logging.info(f"  - Land Cover: {add_land_cover}")
+    logging.info(f"  - Ocean Color: {ocean_color}")
+    logging.info(f"  - Land Color: {land_color}")
+    logging.info(f"  - River Color: {river_color}")
+    logging.info(f"  - Border Color: {border_color}")
 
     # 1. Set up the plot and projection
     fig_width_in = width_px / dpi
@@ -44,24 +54,30 @@ def generate_map(
     ax.set_global()  # Extent is the whole world
 
     # 2. Add map features based on configuration
-    ax.add_feature(cfeature.OCEAN, zorder=0, facecolor="#a0d1f1")
+    ax.add_feature(cfeature.OCEAN.with_scale('10m'), zorder=0, facecolor=ocean_color)
 
     if add_land_cover:
         ax.stock_img()
     else:
-        ax.add_feature(cfeature.LAND, zorder=0, facecolor="#94c27c")
+        ax.add_feature(cfeature.LAND.with_scale('10m'), zorder=0, facecolor=land_color)
 
     if add_shaded_relief:
         logging.info("Adding shaded relief (may download data on first run)...")
-        shade = srtm.SRTM3Source(regrid_shape=(width_px // 4, height_px // 4))
-        ax.add_raster(shade.shaded_relief, cmap="gray", zorder=2, alpha=0.3)
+        # Create a source for the SRTM data and specify a resolution.
+        # SRTM3 is 3 arc-second resolution (approx 90m).
+        srtm_source = srtm.SRTM3Source()
+
+        # Add the SRTM data as a shaded relief image.
+        # The `1` specifies the resolution to use from the source.
+        # The `cmap` and `alpha` are applied to the shaded relief.
+        ax.add_raster(srtm_source, cmap='gray', alpha=0.5, zorder=2)
 
     if add_rivers:
-        ax.add_feature(cfeature.RIVERS.with_scale("10m"), zorder=3, edgecolor="#6ab3f7")
+        ax.add_feature(cfeature.RIVERS.with_scale("10m"), zorder=3, edgecolor=river_color)
 
     if add_borders:
         ax.add_feature(
-            cfeature.BORDERS.with_scale("10m"), zorder=4, edgecolor="gray", linestyle="--"
+            cfeature.BORDERS.with_scale("10m"), zorder=4, edgecolor=border_color, linestyle="--"
         )
 
     ax.add_feature(cfeature.COASTLINE.with_scale("10m"), zorder=5, edgecolor="black", linewidth=0.5)

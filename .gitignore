@@ -1,0 +1,3 @@
+.env
+.exported_maps/*
+.src/__pycache__/*
